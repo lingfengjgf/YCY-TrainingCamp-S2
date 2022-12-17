@@ -5,8 +5,11 @@ import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 
 let mixer;
 
+// 创建场景
 const scene = new THREE.Scene();
+// 创建相机
 const camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.01,10);
+// 创建渲染器
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -35,7 +38,8 @@ scene.add(directionLight);
 
 // 创建甜甜圈
 let donuts;
-new GLTFLoader().load("../resources/models/donuts.glb",(gltf)=>{
+// 加载gltf/glb模型
+new GLTFLoader().load("../resources/models/donuts_new.glb",(gltf)=>{
   // console.log(gltf);
   scene.add(gltf.scene);
   donuts = gltf.scene;
@@ -56,6 +60,7 @@ new GLTFLoader().load("../resources/models/donuts.glb",(gltf)=>{
   })
 });
 
+// 加载环境光HDR图片
 new RGBELoader().load("../resources/sky.hdr",texture=>{
   texture.mapping = THREE.EquirectangularReflectionMapping;
   scene.environment = texture;
