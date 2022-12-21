@@ -13,6 +13,8 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.01,100);
 // 创建渲染器
 const renderer = new THREE.WebGLRenderer({antialias:true});
+// 打开renderer阴影
+renderer.shadowMap.enabled = true;
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -30,7 +32,23 @@ scene.add(ambientLight);
 
 // 方向光
 const directionLight = new THREE.DirectionalLight(0xffffff,0.2);
+// 打开灯光阴影
+directionLight.castShadow = true;
 scene.add(directionLight);
+
+// 设置灯光阴影贴图大小
+directionLight.shadow.mapSize.width = 2048;
+directionLight.shadow.mapSize.height = 2048;
+
+// 设置阴影体 远近 大小
+const shadowDistance = 20;
+directionLight.shadow.camera.near = 0.1; //默认值
+directionLight.shadow.camera.far = 40; //默认值
+directionLight.shadow.camera.left = -shadowDistance;
+directionLight.shadow.camera.right = shadowDistance;
+directionLight.shadow.camera.top = shadowDistance;
+directionLight.shadow.camera.bottom = -shadowDistance;
+directionLight.shadow.bias = -0.001;
 
 directionLight.position.set(10,10,10);
 directionLight.lookAt(new THREE.Vector3(0,0,0));
@@ -45,10 +63,16 @@ let playerMesh;
 let actionIdle; // 人物静止动画 
 let actionWalk; // 人物走路动画
 new GLTFLoader().load("../resources/models/player.glb",gltf=>{
+
+  gltf.scene.traverse(child=>{
+    child.receiveShadow = true;
+    child.castShadow = true;
+  })
+
   playerMesh=gltf.scene;
   scene.add(playerMesh);
   // 人物位置
-  playerMesh.position.set(28,0,0);
+  playerMesh.position.set(13,0,0);
 
   // 人物方向
   playerMesh.rotateY(-Math.PI/2);
@@ -73,11 +97,11 @@ new GLTFLoader().load("../resources/models/player.glb",gltf=>{
   playerMixer = new THREE.AnimationMixer(gltf.scene);
   const clipIdle = THREE.AnimationUtils.subclip(gltf.animations[0],'idle',31,281);
   actionIdle = playerMixer.clipAction(clipIdle);
-  // actionIdle.play();
+  actionIdle.play();
 
   const clipWalk = THREE.AnimationUtils.subclip(gltf.animations[0],'walk',0,30);
   actionWalk = playerMixer.clipAction(clipWalk);
-  actionWalk.play();
+  // actionWalk.play();
 
 })
 
@@ -85,10 +109,40 @@ new GLTFLoader().load("../resources/models/player.glb",gltf=>{
 // 控制人物移动
 
 // 按键移动
+let isWalk = false;
+const playerHalfHeight = new THREE.Vector3(0,0.8,0);
 window.addEventListener('keydown',e=>{
   // 前进
   if(e.key==='w'){
-    playerMesh.translateZ(0.1);
+
+    // 碰撞检测
+    const curPos = playerMesh.position.clone();
+    playerMesh.translateZ(1);
+    const frontPos = playerMesh.position.clone();
+    playerMesh.translateZ(-1);
+
+    const frontVector3 = frontPos.sub(curPos).normalize();
+    const raycasterFront = new THREE.Raycaster(playerMesh.position.clone().add(playerHalfHeight),frontVector3);
+    const collisionResultsFrontObjs = raycasterFront.intersectObjects(scene.children);
+    if(collisionResultsFrontObjs && collisionResultsFrontObjs[0] && collisionResultsFrontObjs[0].distance > 1){
+      playerMesh.translateZ(0.1);
+    }
+
+    // if(collisionResultsFrontObjs && collisionResultsFrontObjs.length === 0){
+    //   playerMesh.translateZ(0.1);
+    // }
+
+    if(!isWalk){
+      crossPlay(actionIdle, actionWalk);
+      isWalk = true;
+    }
+  }
+})
+
+window.addEventListener('keyup',e=>{
+  if(e.key==='w'){
+    crossPlay(actionWalk, actionIdle);
+    isWalk = false;
   }
 })
 
@@ -117,6 +171,7 @@ new GLTFLoader().load("../resources/models/test02.glb",(gltf)=>{
 
   gltf.scene.traverse(child=>{
 
+    // 场馆投影
     child.castShadow = true;
     child.receiveShadow = true;
 
@@ -178,6 +233,15 @@ new GLTFLoader().load("../resources/models/test02.glb",(gltf)=>{
 //   renderer.render(scene,camera);  
 // })
 
+// 给动作切换时加一个淡入淡出效果，避免角色抖动
+function crossPlay(curAction, newAction) {
+  curAction.fadeOut(0.3);
+  newAction.reset();
+  newAction.setEffectiveWeight(1);
+  newAction.play();
+  newAction.fadeIn(0.3);
+}
+
 // 帧循环
 function animate(){
   requestAnimationFrame(animate);
@@ -191,6 +255,9 @@ function animate(){
     mixer.update(0.02);
   }
 
+  if(playerMixer){
+    playerMixer.update(0.015);
+  }
 }
 
 animate();
