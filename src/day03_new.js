@@ -110,7 +110,7 @@ new GLTFLoader().load("../resources/models/player.glb",gltf=>{
 
 // 按键移动
 let isWalk = false;
-const playerHalfHeight = new THREE.Vector3(0,0.8,0);
+const playerHalfHeight = new THREE.Vector3(0,0.5,0);
 window.addEventListener('keydown',e=>{
   // 前进
   if(e.key==='w'){
@@ -163,6 +163,44 @@ window.addEventListener('resize',()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
 },false);
 
+
+// 创建机器人模型
+let robotMixer;
+new GLTFLoader().load("../resources/models/robot_playground.glb",gltf=>{
+
+  let robotMesh=gltf.scene;
+  robotMesh.traverse(child=>{
+    child.receiveShadow = true;
+    child.castShadow = true;
+  })
+
+  scene.add(robotMesh);
+
+  robotMesh.position.set(0,1,-12);
+
+  robotMixer = new THREE.AnimationMixer(robotMesh);
+  console.log("gltf.animations",gltf.animations);
+  const robotAction = robotMixer.clipAction(gltf.animations[0]);
+  robotAction.play();
+
+})
+
+new GLTFLoader().load("../resources/models/x-12_mech.glb",gltf=>{
+
+  let robotMesh=gltf.scene;
+  robotMesh.traverse(child=>{
+    child.receiveShadow = true;
+    child.castShadow = true;
+  })
+
+  scene.add(robotMesh);
+
+  robotMesh.position.set(-8.5,0.6,9);
+
+  robotMesh.rotateY(Math.PI*3/4);
+
+})
+
 // 创建场馆
 // 加载gltf/glb模型
 new GLTFLoader().load("../resources/models/test02.glb",(gltf)=>{
@@ -175,7 +213,7 @@ new GLTFLoader().load("../resources/models/test02.glb",(gltf)=>{
     child.castShadow = true;
     child.receiveShadow = true;
 
-    if(child.name=='2023'){
+    if(child.name=='2023' || child.name=='造型01'){
       const video = document.createElement('video');
       video.src = "../resources/yanhua.mp4";
       video.muted = true;
@@ -186,7 +224,7 @@ new GLTFLoader().load("../resources/models/test02.glb",(gltf)=>{
       const videoMaterial = new THREE.MeshBasicMaterial({map: videoTexture});
       child.material = videoMaterial;
     }
-    if(child.name=='屏幕1'){
+    if(child.name=='屏幕1'||child.name=='操作屏'){
       const video = document.createElement('video');
       video.src = "../resources/video01.mp4";
       video.muted = true;
@@ -257,6 +295,10 @@ function animate(){
 
   if(playerMixer){
     playerMixer.update(0.015);
+  }
+
+  if(robotMixer){
+    robotMixer.update(0.015);
   }
 }
 
